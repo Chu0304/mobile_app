@@ -46,8 +46,9 @@ dependencies:
   dio: ^5.4.0  # ✅ Add this line
   url_launcher: ^6.1.10  # or the latest version
   image_picker: ^1.0.4
-  share_plus: ^7.2.2  # Optional for sharing
-
+  share_plus: ^7.2.2  # Optional for sharing functionality
+  shared_preferences: ^2.3.2  # For persistent theme
+  
 
 
 
