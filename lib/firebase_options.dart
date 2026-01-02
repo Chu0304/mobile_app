@@ -1,3 +1,76 @@
 import 'package:firebase_core/firebase_core.dart' show FirebaseOptions;
 import 'package:flutter/foundation.dart'
 // do ur task here
+
+class DefaultFirebaseOptions {
+  static FirebaseOptions get currentPlatform {
+    if (kIsWeb) {
+      return web;
+    }
+    switch (defaultTargetPlatform) {
+      case TargetPlatform.android:
+        return android;
+      case TargetPlatform.iOS:
+        return ios;
+      case TargetPlatform.macOS:
+        return macos;
+      case TargetPlatform.windows:
+        return windows;
+      case TargetPlatform.linux:
+        throw UnsupportedError(
+          'DefaultFirebaseOptions have not been configured for linux - '
+          'you can reconfigure this by running the FlutterFire CLI again.',
+        );
+      default:
+        throw UnsupportedError(
+          'DefaultFirebaseOptions are not supported for this platform.',
+        );
+    }
+  }
+
+  static const FirebaseOptions web = FirebaseOptions(
+    apiKey: 'AIzaSyBDzGFZN4C8CpYmAQxECKcSeVcTzywsjHI',
+    appId: '1:283806254724:web:8b865debd4425cbd3164d1',
+    messagingSenderId: '283806254724',
+    projectId: 'projectshopflutter',
+    authDomain: 'projectshopflutter.firebaseapp.com',
+    storageBucket: 'projectshopflutter.firebasestorage.app',
+    measurementId: 'G-3CSMLPXL6X',
+  );
+
+  static const FirebaseOptions android = FirebaseOptions(
+    apiKey: 'AIzaSyDlmXRPyVm3cb_zkJ2PX-hXtT5EG1PQ_Nk',
+    appId: '1:283806254724:android:95853f10308e8ffd3164d1',
+    messagingSenderId: '283806254724',
+    projectId: 'projectshopflutter',
+    storageBucket: 'projectshopflutter.firebasestorage.app',
+  );
+
+  static const FirebaseOptions ios = FirebaseOptions(
+    apiKey: 'AIzaSyDy2qWSvvzQLp40KKYOoLeYUknVELl4bsE',
+    appId: '1:283806254724:ios:8af06689acff7c1d3164d1',
+    messagingSenderId: '283806254724',
+    projectId: 'projectshopflutter',
+    storageBucket: 'projectshopflutter.firebasestorage.app',
+    iosBundleId: 'com.example.shoeShop',
+  );
+
+  static const FirebaseOptions macos = FirebaseOptions(
+    apiKey: 'AIzaSyDy2qWSvvzQLp40KKYOoLeYUknVELl4bsE',
+    appId: '1:283806254724:ios:8af06689acff7c1d3164d1',
+    messagingSenderId: '283806254724',
+    projectId: 'projectshopflutter',
+    storageBucket: 'projectshopflutter.firebasestorage.app',
+    iosBundleId: 'com.example.shoeShop',
+  );
+
+  static const FirebaseOptions windows = FirebaseOptions(
+    apiKey: 'AIzaSyBDzGFZN4C8CpYmAQxECKcSeVcTzywsjHI',
+    appId: '1:283806254724:web:2f04542ffe8a34bd3164d1',
+    messagingSenderId: '283806254724',
+    projectId: 'projectshopflutter',
+    authDomain: 'projectshopflutter.firebaseapp.com',
+    storageBucket: 'projectshopflutter.firebasestorage.app',
+    measurementId: 'G-GB8QFP3GBK',
+  );
+}
