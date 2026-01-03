@@ -10,149 +10,104 @@ import 'package:shoe_shop/models/product.dart';
 
 // do ur task here
 
-import 'dart:async';
-import 'package:flutter/material.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
-
-class FavoritesProvider with ChangeNotifier {
-  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
-  final FirebaseAuth _auth = FirebaseAuth.instance;
-
-  StreamSubscription<QuerySnapshot<Map<String, dynamic>>>? _favoritesSub;
-  StreamSubscription<User?>? _authSub;
-
-  /// 🔐 Current user id
-  String? get _uid => _auth.currentUser?.uid;
-  bool get isLoggedIn => _uid != null;
-
-  /// ⭐ Local cache
-  final Map<String, Map<String, dynamic>> _favoriteProducts = {};
-
-  /// 📦 Public getters (NON-NULLABLE)
-  Map<String, Map<String, dynamic>> get favoriteProducts =>
-      Map.unmodifiable(_favoriteProducts);
-
-  List<String> get favoriteIds =>
-      List.unmodifiable(_favoriteProducts.keys);
-
-  FavoritesProvider() {
-    _listenToAuth();
-  }
-
-  /// 🔐 Listen to auth changes
-  void _listenToAuth() {
-    _authSub = _auth.authStateChanges().listen((user) {
-      _favoritesSub?.cancel();
-      _favoriteProducts.clear();
-
-      if (user != null) {
-        _listenToFavorites();
-      }
-
-      notifyListeners();
-    });
-  }
-
-  /// 🔁 Listen to Firestore favorites
-  void _listenToFavorites() {
-    final uid = _uid;
-    if (uid == null) return;
-
-    _favoritesSub = _firestore
-        .collection('users')
-        .doc(uid)
-        .collection('favorites')
-        .snapshots()
-        .listen((snapshot) {
-      _favoriteProducts
-        ..clear()
-        ..addEntries(
-          snapshot.docs.map(
-            (doc) => MapEntry(doc.id, doc.data()),
-          ),
-        );
-
-      notifyListeners();
-    });
-  }
-
-  /// ❤️ Add favorite
-  Future<void> addFavorite({
-    required String productId,
-    required String title,
-    required dynamic price,
-    required String image,
-  }) async {
-    final uid = _uid;
-    if (uid == null) return;
-
-    await _firestore
-        .collection('users')
-        .doc(uid)
-        .collection('favorites')
-        .doc(productId)
-        .set({
-      'id': productId,
-      'title': title,
-      'price': (price as num).toDouble(),
-      'image': image,
-      'createdAt': FieldValue.serverTimestamp(),
-    });
-  }
-
-  /// 💔 Remove favorite
-  Future<void> removeFavorite(String productId) async {
-    final uid = _uid;
-    if (uid == null) return;
-
-    await _firestore
-        .collection('users')
-        .doc(uid)
-        .collection('favorites')
-        .doc(productId)
-        .delete();
-  }
-
-  /// 🔁 Toggle favorite (NO notifyListeners here)
-  Future<void> toggleFavorite({
-    required String productId,
-    required String title,
-    required double price,
-    required String image,
-  }) async {
-    if (_favoriteProducts.containsKey(productId)) {
-      await removeFavorite(productId);
-    } else {
-      await addFavorite(
-        productId: productId,
-        title: title,
-        price: price,
-        image: image,
-      );
-    }
-  }
-
-  /// 🔍 Fast local check
-  bool isFavorite(String productId) =>
-      _favoriteProducts.containsKey(productId);
-
-  /// ❤️➡️🛒 Add favorite to cart
-  void addToCartFromFavorites(
-    String productId,
-    void Function(Map<String, dynamic>) addToCart,
-  ) {
-    final product = _favoriteProducts[productId];
-    if (product != null) {
-      addToCart(product);
-    }
-  }
+class FavoritesScreen extends StatelessWidget {
+  const FavoritesScreen({super.key});
 
   @override
-  void dispose() {
-    _favoritesSub?.cancel();
-    _authSub?.cancel();
-    super.dispose();
-  }
-}
+  Widget build(BuildContext context) {
+    // We use watch to ensure the UI rebuilds if an item is removed
+    final favoritesProvider = context.watch<FavoritesProvider>();
+    final cartProvider = context.read<CartProvider>();
 
+    // Convert the values in the favorites map to a list of Product objects
+    final favoriteProducts = favoritesProvider.favoriteProducts.values.toList();
+
+    return Scaffold(
+      backgroundColor: Colors.grey[100],
+      appBar: AppBar(
+        title: const Text('My Wishlist ❤️', 
+          style: TextStyle(fontWeight: FontWeight.bold)),
+        backgroundColor: Colors.pink,
+        foregroundColor: Colors.white,
+        elevation: 0,
+      ),
+      body: favoriteProducts.isEmpty
+          ? _buildEmptyState()
+          : GridView.builder(
+              padding: const EdgeInsets.all(16),
+              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: 2,
+                childAspectRatio: 0.72, 
+                crossAxisSpacing: 16,
+                mainAxisSpacing: 16,
+              ),
+              itemCount: favoriteProducts.length,
+              itemBuilder: (context, index) {
+                final raw = favoriteProducts[index];
+                // If the stored favorite is a Map, convert it to a Product instance.
+                final product = raw is Map<String, dynamic>
+                    ? Product(
+                        id: raw['id'],
+                        name: raw['name'] ?? raw['title'] ?? '',
+                        image: raw['image'],
+                        price: raw['price'],
+                        description: raw['description'] ?? '',
+                        category: raw['category'] ?? '',
+                      )
+                    : raw as Product;
+
+                return GestureDetector(
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => ProductDetailsScreen(product: product),
+                      ),
+                    );
+                  },
+                  child: ProductCard(
+                    // Accessing properties directly from the object to avoid Null errors
+                    productId: product.id,
+                    title: product.name,
+                    image: product.image,
+                    price: product.price,
+                    isFavorite: true, 
+                    onFavorite: () {
+                      favoritesProvider.toggleFavorite(
+                        productId: product.id,
+                        title: product.name,
+                        price: product.price,
+                        image: product.image,
+                      );
+                    },
+                    onAdd: () {
+                      cartProvider.addToCart(product);
+                      ScaffoldMessenger.of(context).hideCurrentSnackBar();
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('Added to cart!'),
+                          duration: Duration(seconds: 1),
+                          behavior: SnackBarBehavior.floating,
+                        ),
+                      );
+                    },
+                  ),
+                );
+              },
+            ),
+    );
+  }
+
+  Widget _buildEmptyState() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(Icons.favorite_border, size: 80, color: Colors.grey[400]),
+          const SizedBox(height: 16),
+          const Text('Your wishlist is empty!', 
+            style: TextStyle(fontSize: 18, color: Colors.grey)),
+        ],
+      ),
+    );
+  }
